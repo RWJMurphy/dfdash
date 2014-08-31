@@ -9,7 +9,6 @@ import os.path
 import random
 import re
 import sqlite3
-import sys
 import threading
 import time
 
@@ -95,13 +94,13 @@ class DFDash:
 
     class Event:
         @classmethod
-        def from_text(cls, text):
+        def from_text(cls, event_line):
             """
-            :type text: unicode
+            :type event_line: unicode
             :rtype list[DFDash.Event]
             """
             def extract_events(text, mapping):
-                events = []
+                maybe_events = []
                 matches = mapping.pattern.search(text)
                 if matches:
                     types = mapping.types
@@ -113,11 +112,13 @@ class DFDash:
                             origin = matches.group('origin')
                         except IndexError:
                             origin = ""
-                        events.append(cls(origin=origin, message=text, type=event_type))
-                return events
+                        maybe_events.append(
+                            DFDash.Event(origin=origin, message=text,
+                                         event_type=event_type))
+                return maybe_events
 
             events = []
-            for es in map(functools.partial(extract_events, text),
+            for es in map(functools.partial(extract_events, event_line),
                           DFDash.EVENT_MAPPINGS):
                 for e in es:
                     if e is not None:
@@ -178,12 +179,12 @@ class DFDash:
 
         def ensure_db_initialized(self):
             try:
-                self.execute("SELECT * FROM events LIMIT 1")
-                self.execute("SELECT * FROM dfdash_config LIMIT 1")
+                self.execute(b"SELECT * FROM events LIMIT 1")
+                self.execute(b"SELECT * FROM dfdash_config LIMIT 1")
             except sqlite3.OperationalError:
                 self._db.executescript(DFDash.DB.SCHEMA)
-                self.execute("SELECT * FROM events LIMIT 1")
-                self.execute("SELECT * FROM dfdash_config LIMIT 1")
+                self.execute(b"SELECT * FROM events LIMIT 1")
+                self.execute(b"SELECT * FROM dfdash_config LIMIT 1")
 
         def execute(self, query, parameters=None, commit=False):
             """
@@ -210,11 +211,17 @@ class DFDash:
             self._db.close()
 
         def config_put(self, key, value):
-            return self.execute("INSERT OR REPLACE INTO `dfdash_config` VALUES (?, ?)", (key, value), True)
+            return self.execute(
+                b"INSERT OR REPLACE INTO `dfdash_config` VALUES (?, ?)",
+                (key, value), True)
 
         def config_get(self, key):
             try:
-                value = self.execute("SELECT `value` FROM `dfdash_config` WHERE `key` LIKE ? LIMIT 1", (key,))[0]
+                # noinspection PyPep8
+                value = self.execute(
+                    b"SELECT `value` FROM `dfdash_config` WHERE `key` LIKE ? LIMIT 1",
+                    (key,)
+                )[0]
                 return value[b"value"]
             except IndexError:
                 return None
@@ -282,7 +289,7 @@ class DFDash:
         self._observer.schedule(
             DFDash.EventHandler(self._on_log_event,
                                 self.connect_db),
-            self.df)
+            bytes(self.df))
         self._observer.start()
 
     def _on_log_event(self, event, db):
@@ -300,7 +307,6 @@ class DFDash:
 
     def _on_log_change(self, db):
         last_line = None
-        i = 0
         while True:
             line = self._log_file.readline()
             line_length = len(line)
@@ -335,11 +341,11 @@ class DFDash:
                     raise KeyboardInterrupt
         self.store_seek(db)
 
-DF_PATH = os.path.normpath(
-    r"X:\Games\Dwarf Fortress\Dwarf Fortress 40_05 Starter Pack r1\Dwarf Fortress 0.40.05")
+# noinspection PyPep8
+DF_PATH = r"X:\Games\Dwarf Fortress\Dwarf Fortress 40_05 Starter Pack r1\Dwarf Fortress 0.40.05"
 PROFILE = True
 COMMIT_EVERY = 5000
 
 if __name__ == "__main__":
-    dfdash = DFDash(DF_PATH, limit=100000)
+    dfdash = DFDash(os.path.normpath(DF_PATH), limit=100000)
     dfdash.run()
