@@ -23,7 +23,7 @@ EVENT_MAPPINGS = map(
         ("(?P<origin>.+) (?P<attack>(bashes|gouges|kicks|punches|pushes|strikes)) (?P<target>.+) in the (?P<body_part>.+) with (his|her|its) (?P<weapon>.+), (?P<wound>(bruising|shattering)) the (?P<material>.+)( through the .+)!",
             ["mob.\g<origin>.combat.\g<weapon>.\g<attack>.\g<target>.\g<body_part>",
              "mob.\g<target>.health.\g<body_part>.\g<material>.\g<wound>"]),
-        ("(?P<origin>.+) (?P<attack>(bites|scratches|shakes|stings|snatches at)) (?P<target>.+) (around by|in) the (?P<body_part>.+), (?P<wound>.+) the (?P<material>.+)( through the .+)!",
+        ("(?P<origin>.+) (?P<attack>(bites|scratches|shakes|stings|snatches at)) (?P<target>.+) (around by|in) the (?P<body_part>.+), (?P<wound>(bruising|shattering)) the (?P<material>.+)( through the .+)?!",
              ["mob.\g<origin>.combat.\g<attack>.\g<target>.\g<body_part>",
               "mob.\g<target>.health.\g<body_part>.\g<material>.\g<wound>"]),
         # sever
@@ -77,7 +77,7 @@ EVENT_MAPPINGS = map(
               "mob.\g<target>.health.\g<body_part>.destroyed.torn_apart"]),
 
         # projectiles
-        ("The flying (?P<weapon>.+) strikes (?P<target>.+) in the (?P<body_part>.+), (?P<wound>.+) the (?P<material>.+)!",
+        ("The flying (?P<weapon>.+) strikes (?P<target>.+) in the (?P<body_part>.+), (?P<wound>(bruising|shattering)) the (?P<material>.+)!",
             ["mob.\g<target>.health.\g<body_part>.\g<material>.\g<wound>",
              "global.combat.projectile.\g<weapon>.strikes.\g<target>"]),
         ("(?P<origin>.+) jumps away from The flying (?P<weapon>.+)!",
@@ -109,7 +109,7 @@ EVENT_MAPPINGS = map(
         ("(?P<origin>.+) strangles (?P<target>.+)'s (?P<body_part>.+), (?P<wound>.+) the (?P<material>.+)!",
              ["mob.\g<origin>.combat.wrestling.strangle.\g<target>.\g<body_part>",
               "mob.\g<target>.health.\g<body_part>.\g<material>.\g<wound>"]),
-        ("(?P<origin>.+) strangles (?P<target>.+)'s (?P<body_part>.+)!",
+        ("(?P<origin>.+) strangles (?P<target>.+)'s (?P<body_part>[^,]+)!",
              "mob.\g<origin>.combat.wrestling.strangle.\g<target>.\g<body_part>"),
         ("(?P<origin>.+) locks (?P<target>.+)'s (?P<body_part>.+) with (his|her|its|.+'s) (?P<weapon>.+)!",
              "mob.\g<origin>.combat.wrestling.\g<weapon>.lock.\g<target>.\g<body_part>"),
@@ -138,7 +138,7 @@ EVENT_MAPPINGS = map(
          ["mob.\g<origin>.combat.\g<weapon>.\g<attack>.\g<target>.\g<body_part>",
           "mob.\g<target>.combat.\g<armor>.deflect.\g<origin>.\g<weapon>"]),
         # batted aside
-        ("(?P<origin>.+) bats the spinning (?P<attack>.+) aside with the (?P<weapon>.+)!",
+        ("(?P<origin>.+) bats The( spinning)? (?P<attack>.+) aside with the (?P<weapon>.+)!",
             "mob.\g<origin>.combat.\g<weapon>.bat.\g<attack>"),
         # training attack
         ("(?P<origin>.+) (?P<attack>(bashes|gouges|kicks|punches|pushes|strikes)) (?P<target>.+) in the (?P<body_part>.+) with (his|her|its) (?P<weapon>.+), lightly tapping the target!",
@@ -157,7 +157,7 @@ EVENT_MAPPINGS = map(
 
         # special attacks
         # web
-        ("(?P<origin>.+) shoots out thick strands of webbing!", "mob.\g<origin>.combat.chot_web"),
+        ("(?P<origin>.+) shoots out thick strands of webbing!", "mob.\g<origin>.combat.shot_web"),
         # venom
         ("(?P<material>.+) is injected into (?P<target>.+)'s (?P<body_part>.+)!",
             "mob.\g<target>.health.\g<body_part>.injected_with.\g<material>"),
@@ -255,7 +255,7 @@ EVENT_MAPPINGS = map(
         ("(?P<origin>.+) has organized a party at (?P<target>.+).",
             "mob.\g<origin>.party.\g<target>"),
         # Trade / Diplomacy
-        ("The outpost liaison (?P<origin>.+) from (?P<civilization>.+) has arrived\.", "civilization.\g<civilization>.liason.\g<origin>.arrived"),
+        ("The outpost liaison (?P<origin>.+) from (?P<civilization>.+) has arrived\.", "civilization.\g<civilization>.liaison.\g<origin>.arrived"),
         ("An?( elven)? caravan from (?P<origin>.+) has arrived\.", "civilization.\g<origin>.merchant.arrived"),
         ("Merchants have arrived and are unloading their goods\.", "global.merchant.unloading"),
         ("Their wagons have bypassed your inaccessible site\.", "global.merchant.caravan.bypassed"),
@@ -274,11 +274,12 @@ EVENT_MAPPINGS = map(
         # Mining
         ("You have struck (?P<material>.+)!", "global.struck.\g<material>"),
         ("You have discovered an expansive cavern deep underground\.", "global.struck.cavern"),
+        ("Digging designation cancelled: (?P<temperature>.+) stone located\.", "global.mining.struck.\g<temperature>"),
 
         # Crafting
-        ("(?P<prigin>.+) has been possessed!", "mob.\g<origin>.status.strange_mood.possessed"),
-        ("(?P<prigin>.+) has claimed a (?P<workshop>.+).", "mob.\g<origin>.status.strange_mood.claimed.\g<workshop>"),
-        ("(?P<prigin>.+) has begun a mysterious construction!", "mob.\g<origin>.status.strange_mood.construction_started"),
+        ("(?P<origin>.+) has been possessed!", "mob.\g<origin>.status.strange_mood.possessed"),
+        ("(?P<origin>.+) has claimed a (?P<workshop>.+).", "mob.\g<origin>.status.strange_mood.claimed.\g<workshop>"),
+        ("(?P<origin>.+) has begun a mysterious construction!", "mob.\g<origin>.status.strange_mood.construction_started"),
 
         ("(?P<origin>.+) has created a masterpiece (.+)!",
             "mob.\g<origin>.craft.masterpiece"),

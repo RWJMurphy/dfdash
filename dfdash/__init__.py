@@ -2,12 +2,10 @@
 from __future__ import print_function, unicode_literals
 
 import codecs
-import json
 import os
 import os.path
-import random
 import re
-import sqlite3
+from sqlite3 import OperationalError
 import threading
 import time
 
@@ -18,6 +16,7 @@ from watchdog.observers.polling import PollingObserver
 
 from db import DB
 from event import Event, EventHandler
+from stats import Stats
 
 class DFDash:
     LOGFILE_NAME = "gamelog.txt"
@@ -37,7 +36,8 @@ class DFDash:
         """
         self.df = df
         self.port = port
-        self.limit = limit
+        self.line_count = 0
+        self.line_limit = limit
 
         self._log_path = os.path.join(df, DFDash.LOGFILE_NAME)
         self._log_offset = 0
@@ -54,8 +54,8 @@ class DFDash:
 
     def run(self):
         db = self.connect_db()
-        self.watch_log()
         self._on_log_change(db)
+        self.watch_log()
         try:
             while True:
                 time.sleep(1)
@@ -93,7 +93,24 @@ class DFDash:
         self._observer.join()
 
     def connect_db(self):
-        return DB(self._db_path)
+        db = DB(self._db_path)
+        try:
+            db.execute("SELECT instr('foo', 'f')")
+        except OperationalError as soe:
+            if soe.message == "no such function: instr":
+                def instr(a, b):
+                    """
+                    :type a: str | unicode
+                    :type b: str | unicode
+                    :rtype: int
+                    """
+                    if None in (a, b):
+                        return None
+                    return a.find(b) + 1
+                db._db.create_function("instr", 2, instr)
+            else:
+                raise
+        return db
 
     def watch_log(self):
         self._observer.schedule(
@@ -113,21 +130,21 @@ class DFDash:
 
         event_type = event.event_type
         if event_type == "modified":
-            self._on_log_change(db)
+            self._on_log_change(db, print_events=True)
 
-    def _on_log_change(self, db):
+    def _on_log_change(self, db, print_events=False):
         last_line = None
         while True:
             line = self._log_file.readline()
             line_length = len(line)
             line = line.rstrip()
             if line == "":
-                self._log_offset += line_length
-                self.store_seek(db)
                 break
             if re.match(r'^x[0-9]+$', line):
                 if last_line is None:
                     print("Got line '{}' but last_line is None :S".format(line))
+                    self.line_count += 1
+                    self._log_offset += line_length
                     continue
                 else:
                     #print("Got line '{}', repeating last line".format(line))
@@ -135,26 +152,28 @@ class DFDash:
             events = Event.from_text(line)
             for event in events:
                 commit = False
-                if self.limit is not None and self.limit % COMMIT_EVERY == 0:
-                    print(event.json)
+                if print_events:
+                    print("{}: {}".format(event.event_type, event.message))
+                if self.line_count is not None and self.line_count % COMMIT_EVERY == 0:
                     commit = True
                 event.put(db, commit)
-            self._log_offset += line_length
             last_line = line
-            if self.limit is not None:
-                self.limit -= 1
-                if self.limit % COMMIT_EVERY == 0:
-                    self.store_seek(db)
-                    print("{}...".format(self.limit))
-                if self.limit == 0:
-                    self.store_seek(db)
-                    raise UserWarning("Limit reached.")
+            self.line_count += 1
+            self._log_offset += line_length
+            if self.line_count % COMMIT_EVERY == 0:
+                self.store_seek(db)
+                print("{}...".format(self.line_count))
+            if self.line_count == self.line_limit:
+                self._log_offset += line_length
+                self.store_seek(db)
+                raise UserWarning("Limit reached.")
         self.store_seek(db)
+        print("Death causes: {!r}".format(Stats.deaths(db)))
 
 DF_PATH = r'\\BELGAER\Games\Dwarf Fortress\Dwarf Fortress 40_05 Starter Pack r2\Dwarf Fortress 0.40.05'
 DB_PATH = os.path.join(os.environ['APPDATA'], "DFDash", "dfdash.db")
 PROFILE = True
-COMMIT_EVERY = 5000
+COMMIT_EVERY = 1000
 
 if __name__ == "__main__":
     dfdash = DFDash(os.path.normpath(DF_PATH), db=DB_PATH)

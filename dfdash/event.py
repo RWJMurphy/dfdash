@@ -6,6 +6,7 @@ from watchdog.events import FileSystemEventHandler
 
 from event_mappings import EVENT_MAPPINGS, EVENT_IGNORE
 
+
 class EventHandler(FileSystemEventHandler):
     def __init__(self, on_modified, db_connector):
         self._db_connector = db_connector
@@ -27,6 +28,7 @@ class Event:
         :type event_line: unicode
         :rtype list[DFDash.Event]
         """
+
         def extract_events(text, mapping):
             """
             :type mapping: EventMapping
@@ -44,16 +46,17 @@ class Event:
                             event_type = matches.expand(event_type)
                         except IndexError:
                             origin = "unknown"
-                            event_type = matches.expand(re.sub('\\\\g<origin>', origin, event_type))
-                        except Exception as e:
+                            event_type = matches.expand(
+                                re.sub('\\\\g<origin>', origin, event_type))
+                        except Exception:
                             print("Error expanding template:")
                             print(matches.groups())
                             print(event_type)
                             raise
                         maybe_events.append(
                             cls(origin=origin, message=text,
-                                         event_type=event_type))
-            except Exception as e:
+                                event_type=event_type))
+            except Exception:
                 print("Error testing regex:")
                 print(mapping.pattern.pattern)
                 print(text)
@@ -66,7 +69,7 @@ class Event:
                 EVENT_MAPPINGS):
             if maybe_events is not None:
                 for event in maybe_events:
-                        events.append(event)
+                    events.append(event)
         if events:
             if len(events) > 2:
                 print("Got many events for line:")
@@ -78,7 +81,7 @@ class Event:
         for pattern in EVENT_IGNORE:
             if pattern.match(event_line):
                 return []
-        #raise Exception("Unhandled event: {}".format(event_line))
+        # raise Exception("Unhandled event: {}".format(event_line))
         return [cls.unknown_event(event_line)]
 
     def __init__(self, origin, message, event_type):
@@ -97,8 +100,8 @@ class Event:
         """
         return db.execute(
             b"INSERT INTO events (message, type, json) VALUES (?, ?, ?)",
-            ("", self.event_type, ""),
-            #(self.message, self.event_type, self.json),
+            # ("", self.event_type, ""),
+            (self.message, self.event_type, self.json),
             commit)
 
     @property

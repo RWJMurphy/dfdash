@@ -1,5 +1,6 @@
 import sqlite3
 
+
 class DB:
     SCHEMA = """CREATE TABLE IF NOT EXISTS `events` (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +37,7 @@ class DB:
 
     def execute(self, query, parameters=None, commit=False):
         """
-        :type query: str
+        :type query: str | unicode
         :type parameters: tuple | dict
         :rtype list[sqlite3.Row] | int
         """
